@@ -8,6 +8,8 @@ from neuralhydrology.datasetzoo.caravan import Caravan
 from neuralhydrology.datasetzoo.genericdataset import GenericDataset
 from neuralhydrology.datasetzoo.hourlycamelsus import HourlyCamelsUS
 from neuralhydrology.datasetzoo.lamah import LamaH
+from neuralhydrology.datasetzoo.dailycsv import DailyCSV
+from neuralhydrology.datasetzoo.hourlycsv import HourlyCSV
 from neuralhydrology.utils.config import Config
 
 
@@ -77,6 +79,10 @@ def get_dataset(cfg: Config,
         Dataset = LamaH
     elif cfg.dataset.lower() == "caravan":
         Dataset = Caravan
+    elif cfg.dataset.lower() == "dailycsv":
+        Dataset = DailyCSV
+    elif cfg.dataset.lower() == "hourlycsv":
+        Dataset = HourlyCSV
     else:
         raise NotImplementedError(f"No dataset class implemented for dataset {cfg.dataset}")
 
