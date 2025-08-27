@@ -12,6 +12,8 @@ from neuralhydrology.datasetzoo.camelsind import CamelsIND
 from neuralhydrology.datasetzoo.genericdataset import GenericDataset
 from neuralhydrology.datasetzoo.hourlycamelsus import HourlyCamelsUS
 from neuralhydrology.datasetzoo.lamah import LamaH
+from neuralhydrology.datasetzoo.dailycsv import DailyCSV
+from neuralhydrology.datasetzoo.hourlycsv import HourlyCSV
 from neuralhydrology.utils.config import Config
 from neuralhydrology.datasetzoo.datasetregistry import DatasetRegistry
 
@@ -66,9 +68,39 @@ def get_dataset(cfg: Config,
     NotImplementedError
         If no data set class is implemented for the 'dataset' argument in the config.
     """
-    global _datasetZooRegistry
+    if cfg.dataset.lower() == "camels_us":
+        Dataset = CamelsUS
+    elif cfg.dataset.lower() == "camels_gb":
+        Dataset = CamelsGB
+    elif cfg.dataset.lower() == "camels_aus":
+        Dataset = CamelsAUS
+    elif cfg.dataset.lower() == "camels_br":
+        Dataset = CamelsBR
+    elif cfg.dataset.lower() == "hourly_camels_us":
+        Dataset = HourlyCamelsUS
+    elif cfg.dataset.lower() == "camels_cl":
+        Dataset = CamelsCL
+    elif cfg.dataset.lower() == "generic":
+        Dataset = GenericDataset
+    elif cfg.dataset.lower() in ["lamah_a", "lamah_b", "lamah_c"]:
+        Dataset = LamaH
+    elif cfg.dataset.lower() == "caravan":
+        Dataset = Caravan
+    elif cfg.dataset.lower() == "dailycsv":
+        Dataset = DailyCSV
+    elif cfg.dataset.lower() == "hourlycsv":
+        Dataset = HourlyCSV
+    else:
+        raise NotImplementedError(f"No dataset class implemented for dataset {cfg.dataset}")
 
-    return _datasetZooRegistry.instantiate_dataset(cfg, is_train, period, basin, additional_features, id_to_int, scaler)
+    ds = Dataset(cfg=cfg,
+                 is_train=is_train,
+                 period=period,
+                 basin=basin,
+                 additional_features=additional_features,
+                 id_to_int=id_to_int,
+                 scaler=scaler)
+    return ds
 
 
 def register_dataset(key: str, new_class: Type):
