@@ -105,10 +105,8 @@ def _create_ensemble(results_files: List[Path], frequencies: List[str], config: 
             # create datetime range at the current frequency, removing time steps that are not being predicted
             frequency_factor = int(get_frequency_factor(lowest_freq, freq))
             # make sure the last day is fully contained in the range
-            freq_date_range = pd.date_range(start=ensemble_xr.coords['date'].values[0],
-                                            end=ensemble_xr.coords['date'].values[-1] \
-                                                + pd.Timedelta(days=1, seconds=-1),
-                                            freq=freq)
+            freq_date_range = pd.date_range(start=ensemble_xr.coords['date'].values[0], 
+                                            periods=len(ensemble_xr.coords['date']) * frequency_factor, freq=freq)
             mask = np.ones(frequency_factor).astype(bool)
             mask[:-len(ensemble_xr.coords['time_step'])] = False
             freq_date_range = freq_date_range[np.tile(mask, len(ensemble_xr.coords['date']))]

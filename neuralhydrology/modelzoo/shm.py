@@ -40,7 +40,15 @@ class SHM(BaseConceptualModel):
             certain prediction period. The time_steps refer to the number of time steps (e.g. days) that our conceptual
             model is going to be run for. The n_inputs refer to the dynamic forcings used to run the conceptual model
             (e.g. Precipitation, Temperature...)
-
+            The order of n_inputs can be specified under dynamic_conceptual_inputs in the configuration and must be
+                
+            - 0: Precipitation [mm/day]
+            - 1: PET [mm/day]
+            - 2: Tmin [°C]
+            - 3: Tmax [°C]
+                
+            If a dataset, such as CAMELS_US, does not have PET then compute PET into a generic dataset for use in this model. 
+            
         lstm_out: torch.Tensor
             Tensor of size [batch_size, time_steps, n_parameters]. The tensor comes from the data-driven model  and will
             be used to obtained the dynamic parameterization of the conceptual model
