@@ -62,9 +62,8 @@ def test_daily_regression_additional_features(get_config: Fixture[Callable[[str]
     _check_results(config, '01022500')
 
 
-def test_autoregression_daily_regression(get_config: Fixture[Callable[[str], dict]],
-                                         daily_dataset: Fixture[str], single_timescale_forcings: Fixture[str]):
-
+def test_autoregression_daily_regression(get_config: Fixture[Callable[[str], dict]], daily_dataset: Fixture[str],
+                                         single_timescale_forcings: Fixture[str]):
     """Tests training and testing with arlstm.
 
     Parameters
@@ -128,6 +127,41 @@ def test_transformer_daily_regression(get_config: Fixture[Callable[[str], dict]]
     _check_results(config, '01022500')
 
 
+@pytest.mark.parametrize('config_name', [
+    'exformer_daily_regression',
+    'peak_transformer_daily_regression',
+    'peakfocus_daily_regression',
+])
+def test_peak_aware_daily_regression(get_config: Fixture[Callable[[str], dict]], config_name: str):
+    """Tests training and testing with the peak-aware transformer variants.
+
+    `peakfocus_daily_regression` additionally exercises the `peak_focal` and `peak_weighted_mse`
+    regularization terms.
+
+    Parameters
+    ----------
+    get_config : Fixture[Callable[[str], dict]]
+        Method that returns a run configuration
+    config_name : str
+        Name of the test config to run.
+    """
+    config = get_config(config_name)
+
+    start_training(config)
+    start_evaluation(cfg=config, run_dir=config.run_dir, epoch=1, period='test')
+
+    if config.predict_last_n == 1:
+        _check_results(config, '01022500')
+    else:
+        # `_check_results` assumes the results cover the full test period, which only holds for
+        # predict_last_n == 1. The peakfocus config predicts multiple steps so that the peak labels
+        # (and their Gaussian softening) are exercised over a real window, so check the predictions
+        # directly instead.
+        results = get_basin_results(config.run_dir, 1)['01022500']['1D']['xr'].isel(time_step=-1)
+        assert len(results['date']) > 0
+        assert not pd.isna(results[f'{config.target_variables[0]}_sim']).any()
+
+
 def test_multi_timescale_regression(get_config: Fixture[Callable[[str], dict]], multi_timescale_model: Fixture[str]):
     """Test regression training and evaluation for multi-timescale predictions.
 
@@ -183,7 +217,6 @@ def test_daily_regression_nan_targets(get_config: Fixture[Callable[[str], dict]]
 
     start_training(config)
     start_evaluation(cfg=config, run_dir=config.run_dir, epoch=1, period='test')
-
 
     # the fact that the targets are NaN should not lead the model to create NaN outputs.
     # however, we do need to pass discharge as an NaN series, because the camels discharge loader would return [],

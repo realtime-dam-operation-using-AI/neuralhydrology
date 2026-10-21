@@ -13,7 +13,7 @@ test_basin_file: finetune_basin.txt
 # specify learning rates to use starting at specific epochs (0 is the initial learning rate)
 learning_rate:
     0: 5e-4
-    2: 5e-5	
+    2: 5e-5
 
 # Number of training epochs
 epochs: 10
@@ -21,3 +21,4 @@ epochs: 10
 finetune_modules:
 - head
 - lstm
+base_run_dir: /home/hydro/research/flood/neuralhydrology/examples/06-Finetuning/runs/cudalstm_531_basins_1709_163029

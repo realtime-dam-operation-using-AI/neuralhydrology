@@ -32,5 +32,8 @@ nh.modelzoo
    neuralhydrology.modelzoo.shm
    neuralhydrology.modelzoo.stacked_forecast_lstm
    neuralhydrology.modelzoo.template
+   neuralhydrology.modelzoo.exformer
+   neuralhydrology.modelzoo.peak_transformer
+   neuralhydrology.modelzoo.peakfocus
    neuralhydrology.modelzoo.transformer
    neuralhydrology.modelzoo.x_lstm

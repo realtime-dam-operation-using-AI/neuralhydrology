@@ -199,6 +199,36 @@ The model requires the following hyperparameters specified in the config file:
 * ``transformer_dropout``: dropout in the feedforward networks between self-attention heads.
 * ``transformer_nlayers``: number of stacked self-attention + feedforward layers.
 
+Exformer
+^^^^^^^^
+:py:class:`neuralhydrology.modelzoo.exformer.Exformer` is a PyTorch implementation of the Extreme-Adaptive
+Transformer, a channel-independent, patch-based encoder whose self-attention is restricted to a sparse mask
+with three components: a *local* band, a *stride* (periodic) component and an *extreme* component that links
+time steps carrying the same "extreme" label. The extreme label is derived from one of the dynamic inputs
+(``exformer_extreme_variable``), so it is available at inference time. The seasonal part of the input is passed
+through the encoder while the trend part is mapped linearly, and both are added before the head.
+
+The model requires the hyperparameters listed under `Exformer settings` in :doc:`config`.
+
+PeakFocus transformer
+^^^^^^^^^^^^^^^^^^^^^
+:py:class:`neuralhydrology.modelzoo.peak_transformer.PeakTransformer` is a Non-stationary Transformer: the
+input window is instance-normalized, two small projectors learn de-stationary factors from the raw window, and
+the attention logits are rescaled with them. Optionally (``peak_transformer_peak_decoder``) the 24-step block
+maximum of the prediction is returned as ``y_hat_peak``.
+
+The model requires the hyperparameters listed under `PeakFocus transformer settings` in :doc:`config`.
+
+PeakFocus
+^^^^^^^^^
+:py:class:`neuralhydrology.modelzoo.peakfocus.PeakFocus` jointly models peak localization and intensity
+regression. A residual-MLP encoder projects the input window onto the prediction window, a multi-scale
+convolutional pyramid (MSM-PL) produces a peak logit and a peak feature vector per predicted time step, and a
+location-aware decoder (LAD) cross-attends to a peak-gated encoder context. The peak logits are returned as
+``peak_logits`` and are trained by the ``peak_focal`` / ``peak_weighted_mse`` regularization terms.
+
+The model requires the hyperparameters listed under `PeakFocus settings` in :doc:`config`.
+
 XLSTM
 ^^^^^
 :py:class:`neuralhydrology.modelzoo.x_lstm.XLSTM` is a recurrent architecture using the official implementation of backbone

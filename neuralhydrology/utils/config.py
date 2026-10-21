@@ -556,15 +556,15 @@ class Config(object):
 
     @property
     def mamba_d_conv(self) -> int:
-        return self._cfg.get("d_conv", 4)
+        return self._cfg.get("mamba_d_conv", self._cfg.get("d_conv", 4))
 
     @property
     def mamba_d_state(self) -> int:
-        return self._cfg.get("d_state", 16)
+        return self._cfg.get("mamba_d_state", self._cfg.get("d_state", 16))
 
     @property
     def mamba_expand(self) -> int:
-        return self._cfg.get("expand", 2)
+        return self._cfg.get("mamba_expand", self._cfg.get("expand", 2))
 
     @property
     def mass_inputs(self) -> List[str]:
@@ -915,7 +915,7 @@ class Config(object):
             Level of verbosity.
         """
         return self._cfg.get("verbose", 1)
-    
+
     @property
     def early_stopping(self) -> bool:
         """Whether to use early stopping. Defaults to False if not set."""
@@ -923,8 +923,7 @@ class Config(object):
         if early_stopping and self.validate_every != 1:
             raise ValueError(
                 "Early stopping can only be used if validation is performed every epoch (validate_every=1). "
-                "Set validate_every=1 in the config to use early stopping."
-            )
+                "Set validate_every=1 in the config to use early stopping.")
         return early_stopping
 
     @property
@@ -932,13 +931,13 @@ class Config(object):
         """Number of epochs with no improvement before stopping."""
         if self.early_stopping:
             return self._get_value_verbose("patience_early_stopping")
-        
+
     @property
     def minimum_epochs_before_early_stopping(self) -> int:
         """Minimum number of epochs before early stopping can be triggered."""
         if self.early_stopping:
             return self._get_value_verbose("minimum_epochs_before_early_stopping")
-    
+
     @property
     def dynamic_learning_rate(self) -> bool:
         """Whether to use  dynamic learning rate. Defaults to False if not set."""
@@ -946,22 +945,21 @@ class Config(object):
         if early_stopping and self.validate_every != 1:
             raise ValueError(
                 "Early stopping can only be used if validation is performed every epoch (validate_every=1). "
-                "Set validate_every=1 in the config to use early stopping."
-            )
+                "Set validate_every=1 in the config to use early stopping.")
         return early_stopping
-    
+
     @property
     def patience_dynamic_learning_rate(self) -> int:
         """Number of epochs with no improvement before reducing learning rate."""
         if self.dynamic_learning_rate:
             return self._get_value_verbose("patience_dynamic_learning_rate")
-        
+
     @property
     def factor_dynamic_learning_rate(self) -> float:
         """Factor by which to reduce learning rate."""
         if self.dynamic_learning_rate:
             return self._get_value_verbose("factor_dynamic_learning_rate")
-    
+
     def _get_embedding_spec(self, embedding_spec: dict) -> dict:
         if isinstance(embedding_spec, bool) and embedding_spec:  #
             msg = [
@@ -987,22 +985,198 @@ class Config(object):
     @property
     def xlstm_num_blocks(self) -> int:
         return self._cfg.get("xlstm_num_blocks", 2)
-    
+
     @property
     def xlstm_slstm_at(self) -> List[int]:
         return self._as_default_list(self._cfg.get("xlstm_slstm_at", [1]))
-    
+
     @property
     def xlstm_heads(self) -> int:
         return self._cfg.get("xlstm_heads", 1)
-    
+
     @property
     def xlstm_kernel_size(self) -> int:
         return self._cfg.get("xlstm_kernel_size", 4)
-    
+
     @property
     def xlstm_proj_factor(self) -> float:
         return self._cfg.get("xlstm_proj_factor", 1.3)
+
+    # --- Exformer (extreme-adaptive transformer) -----------------------------------------------------------
+
+    @property
+    def exformer_patch_size(self) -> int:
+        return self._cfg.get("exformer_patch_size", 12)
+
+    @property
+    def exformer_embed_dim(self) -> int:
+        return self._cfg.get("exformer_embed_dim", 8)
+
+    @property
+    def exformer_n_heads(self) -> int:
+        return self._cfg.get("exformer_n_heads", 4)
+
+    @property
+    def exformer_encoder_depth(self) -> int:
+        return self._cfg.get("exformer_encoder_depth", 2)
+
+    @property
+    def exformer_d_ff(self) -> int:
+        return self._cfg.get("exformer_d_ff", 32)
+
+    @property
+    def exformer_dropout(self) -> float:
+        return self._cfg.get("exformer_dropout", 0.1)
+
+    @property
+    def exformer_local_window(self) -> int:
+        return self._cfg.get("exformer_local_window", 2)
+
+    @property
+    def exformer_stride(self) -> int:
+        return self._cfg.get("exformer_stride", 4)
+
+    @property
+    def exformer_mask(self) -> str:
+        return self._cfg.get("exformer_mask", "dozer_ext_0")
+
+    @property
+    def exformer_patch_thres(self) -> int:
+        return self._cfg.get("exformer_patch_thres", 1)
+
+    @property
+    def exformer_moving_avg(self) -> List[int]:
+        return self._as_default_list(self._cfg.get("exformer_moving_avg", [13, 17]))
+
+    @property
+    def exformer_extreme_variable(self) -> str:
+        return self._get_value_verbose("exformer_extreme_variable")
+
+    @property
+    def exformer_extreme_threshold(self) -> float:
+        return self._cfg.get("exformer_extreme_threshold", 2.0)
+
+    # --- PeakFocus non-stationary transformer --------------------------------------------------------------
+
+    @property
+    def peak_transformer_d_model(self) -> int:
+        return self._cfg.get("peak_transformer_d_model", 64)
+
+    @property
+    def peak_transformer_n_heads(self) -> int:
+        return self._cfg.get("peak_transformer_n_heads", 4)
+
+    @property
+    def peak_transformer_d_ff(self) -> int:
+        return self._cfg.get("peak_transformer_d_ff", 64)
+
+    @property
+    def peak_transformer_e_layers(self) -> int:
+        return self._cfg.get("peak_transformer_e_layers", 2)
+
+    @property
+    def peak_transformer_d_layers(self) -> int:
+        return self._cfg.get("peak_transformer_d_layers", 1)
+
+    @property
+    def peak_transformer_dropout(self) -> float:
+        return self._cfg.get("peak_transformer_dropout", 0.1)
+
+    @property
+    def peak_transformer_label_len(self) -> int:
+        return self._cfg.get("peak_transformer_label_len", 48)
+
+    @property
+    def peak_transformer_hour_day(self) -> str:
+        return self._cfg.get("peak_transformer_hour_day", "n")
+
+    @property
+    def peak_transformer_with_shift(self) -> str:
+        return self._cfg.get("peak_transformer_with_shift", "ws")
+
+    @property
+    def peak_transformer_shift_segments(self) -> int:
+        return self._cfg.get("peak_transformer_shift_segments", 24)
+
+    @property
+    def peak_transformer_p_hidden_dims(self) -> List[int]:
+        return self._as_default_list(self._cfg.get("peak_transformer_p_hidden_dims", [128, 128]))
+
+    @property
+    def peak_transformer_p_hidden_layers(self) -> int:
+        return self._cfg.get("peak_transformer_p_hidden_layers", 2)
+
+    @property
+    def peak_transformer_peak_decoder(self) -> bool:
+        return self._cfg.get("peak_transformer_peak_decoder", False)
+
+    # --- PeakFocus (MSM-PL + LAD) --------------------------------------------------------------------------
+
+    @property
+    def peakfocus_d_model(self) -> int:
+        return self._cfg.get("peakfocus_d_model", 64)
+
+    @property
+    def peakfocus_n_heads(self) -> int:
+        return self._cfg.get("peakfocus_n_heads", 4)
+
+    @property
+    def peakfocus_d_ff(self) -> int:
+        return self._cfg.get("peakfocus_d_ff", 64)
+
+    @property
+    def peakfocus_d_layers(self) -> int:
+        return self._cfg.get("peakfocus_d_layers", 1)
+
+    @property
+    def peakfocus_mlp_layers(self) -> int:
+        return self._cfg.get("peakfocus_mlp_layers", 2)
+
+    @property
+    def peakfocus_dropout(self) -> float:
+        return self._cfg.get("peakfocus_dropout", 0.1)
+
+    @property
+    def peakfocus_instance_norm(self) -> bool:
+        return self._cfg.get("peakfocus_instance_norm", False)
+
+    @property
+    def peakfocus_n_scales(self) -> int:
+        return self._cfg.get("peakfocus_n_scales", 2)
+
+    @property
+    def peakfocus_if_msm_pl(self) -> bool:
+        return self._cfg.get("peakfocus_if_msm_pl", True)
+
+    @property
+    def peakfocus_if_lad(self) -> bool:
+        return self._cfg.get("peakfocus_if_lad", True)
+
+    # --- peak-aware regularization terms --------------------------------------------------------------------
+
+    @property
+    def peak_label_window(self) -> int:
+        return self._cfg.get("peak_label_window", 3)
+
+    @property
+    def peak_label_threshold(self) -> float:
+        return self._cfg.get("peak_label_threshold", 1.0)
+
+    @property
+    def peak_soft_label_sigma(self) -> float:
+        return self._cfg.get("peak_soft_label_sigma", 2.0)
+
+    @property
+    def peak_soft_label_tolerance(self) -> int:
+        return self._cfg.get("peak_soft_label_tolerance", 3)
+
+    @property
+    def peak_focal_alpha(self) -> float:
+        return self._cfg.get("peak_focal_alpha", 0.25)
+
+    @property
+    def peak_focal_gamma(self) -> float:
+        return self._cfg.get("peak_focal_gamma", 2.0)
 
 
 def create_random_name():

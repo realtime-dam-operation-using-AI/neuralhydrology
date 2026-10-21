@@ -1,0 +1,14 @@
+,Set A,Set B,Set C
+parameters,67137,67521,67585
+epochs trained,48,36,45
+best epoch,43,4,5
+early stopped,True,True,True
+s / epoch,113.0,126.3,114.2
+training time (min),89.6,75.4,86.0
+test NSE,0.559,0.169,0.222
+test KGE,0.715,0.104,0.179
+test RMSE (m³/s),57.5,79.0,76.4
+test PBIAS (%),-2.3,43.5,-23.6
+test FHV (%),0.0,-44.9,-53.1
+peak |error| mean (%),48.6,79.0,83.6
+peak |timing| mean (h),7.9,4.7,6.6

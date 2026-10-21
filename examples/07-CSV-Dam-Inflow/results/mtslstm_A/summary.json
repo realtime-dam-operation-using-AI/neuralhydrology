@@ -1,0 +1,93 @@
+{
+  "model": "mtslstm",
+  "model_name": "MTS-LSTM",
+  "nh_model": "mtslstm",
+  "input_set": "A",
+  "input_set_name": "basin-average rainfall",
+  "dynamic_inputs": {
+    "1D": [
+      "rf_avg_daily"
+    ],
+    "1h": [
+      "rf_avg_hourly"
+    ]
+  },
+  "run_dir": "mtslstm_A_2010_132636",
+  "n_parameters": 42754,
+  "epochs_trained": 50,
+  "best_epoch": 49,
+  "best_val_loss": 0.75477,
+  "early_stopped": false,
+  "epoch_time_mean_s": 2.5306122448979593,
+  "train_time_total_s": 128.0,
+  "train_time_to_best_s": 126.0,
+  "eval_time_test_s": 0.8411858081817627,
+  "metrics": {
+    "train": {
+      "NSE": 0.7941378861045733,
+      "MSE": 1029.644927629374,
+      "RMSE": 32.088080771984075,
+      "KGE": 0.6895340101389171,
+      "Alpha-NSE": 0.7145321970212005,
+      "Beta-KGE": 0.9137043458304716,
+      "Beta-NSE": -0.03194026089821253,
+      "Pearson-r": 0.9136847383463824,
+      "FHV": -18.4419902351999,
+      "FMS": -31.366750556098445,
+      "FLV": 99.84769304948337,
+      "Peak-Timing": 6.137184115523466,
+      "Missed-Peaks": 0.6863436123348018,
+      "Peak-MAPE": 67.63306188851863,
+      "MAE": 11.720197677612305,
+      "PBIAS": -8.629566192626953
+    },
+    "validation": {
+      "NSE": 0.6670082289102037,
+      "MSE": 4560.626746421363,
+      "RMSE": 67.53241256183111,
+      "KGE": 0.5577431472373948,
+      "Alpha-NSE": 0.6075844052991278,
+      "Beta-KGE": 0.8574758686710481,
+      "Beta-NSE": -0.04127590415997957,
+      "Pearson-r": 0.8540959327504092,
+      "FHV": -25.164432794669317,
+      "FMS": -18.721459098248165,
+      "FLV": 99.8871477997596,
+      "Peak-Timing": 3.7560975609756095,
+      "Missed-Peaks": 0.7261410788381742,
+      "Peak-MAPE": 59.493562193412906,
+      "MAE": 14.526942253112793,
+      "PBIAS": -14.252411842346191
+    },
+    "test": {
+      "NSE": 0.8046927378834626,
+      "MSE": 1466.3036401044865,
+      "RMSE": 38.292344405957785,
+      "KGE": 0.7064305594692433,
+      "Alpha-NSE": 0.7176972745540361,
+      "Beta-KGE": 1.000927390890956,
+      "Beta-NSE": 0.00029890756997383175,
+      "Pearson-r": 0.9194560519625616,
+      "FHV": -18.676289135761255,
+      "FMS": -49.93894627557989,
+      "FLV": 99.82549272945093,
+      "Peak-Timing": 3.019230769230769,
+      "Missed-Peaks": 0.697265625,
+      "Peak-MAPE": 51.6996067425813,
+      "MAE": 12.736045837402344,
+      "PBIAS": 0.09273941069841385
+    }
+  },
+  "events_test": {
+    "n_events": 15,
+    "peak_error_mean_pct": -41.16243791623404,
+    "peak_error_median_pct": -35.870829423901085,
+    "peak_abs_error_mean_pct": 41.16243791623404,
+    "timing_error_mean_h": 0.8666666666666667,
+    "timing_abs_error_mean_h": 1.6666666666666667,
+    "timing_within_3h_frac": 0.8666666666666667,
+    "peak_within_20pct_frac": 0.0,
+    "volume_error_mean_pct": -5.400600910186768,
+    "event_NSE_median": 0.7897570690696367
+  }
+}

@@ -32,6 +32,36 @@ if cuda_home:
         include_path = os.path.join(cuda_home, "include")
         if os.path.exists(include_path):
             os.environ["XLSTM_EXTRA_INCLUDE_PATHS"] = include_path
+
+# The CUDA runtime that comes with the PyTorch pip wheels ships its headers (cublas_v2.h, cusparse.h, ...) below
+# site-packages/nvidia/*/include instead of CUDA_HOME/include. Add those folders so the sLSTM kernels can be compiled.
+import glob
+import sysconfig
+_nvidia_includes = [
+    p for p in glob.glob(os.path.join(sysconfig.get_paths()["purelib"], "nvidia", "*", "include"))
+    if os.path.exists(os.path.join(p, "cublas_v2.h")) or os.path.exists(os.path.join(p, "cusparse.h"))
+]
+if _nvidia_includes:
+    _existing = [p for p in os.environ.get("XLSTM_EXTRA_INCLUDE_PATHS", "").split(":") if p]
+    os.environ["XLSTM_EXTRA_INCLUDE_PATHS"] = ":".join(_existing + [p for p in _nvidia_includes if p not in _existing])
+
+# The same wheels only ship versioned shared objects (libcublas.so.<major>), but the sLSTM extension is linked with
+# `-L$CUDA_LIB -lcublas`, which needs an unversioned `libcublas.so`. If CUDA_LIB does not provide one, create a small
+# cache folder with symlinks to the wheel's libraries and point CUDA_LIB to it.
+if not os.path.exists(os.path.join(os.environ.get("CUDA_LIB", ""), "libcublas.so")):
+    _wheel_libs = sorted(glob.glob(os.path.join(sysconfig.get_paths()["purelib"], "nvidia", "*", "lib", "libcublas.so*")))
+    if _wheel_libs:
+        _link_dir = os.path.join(os.path.expanduser("~"), ".cache", "neuralhydrology", "xlstm_cuda_lib")
+        os.makedirs(_link_dir, exist_ok=True)
+        for _lib in _wheel_libs:
+            _name = os.path.basename(_lib)
+            _unversioned = _name.split(".so")[0] + ".so"
+            for _target in {_name, _unversioned}:
+                _link = os.path.join(_link_dir, _target)
+                if not os.path.exists(_link):
+                    os.symlink(_lib, _link)
+        os.environ["CUDA_LIB"] = _link_dir
+_XLSTM_CUDA_LIB = os.environ.get("CUDA_LIB")
 # -----------------------------------------------
 
 try:
@@ -47,6 +77,11 @@ try:
     XLSTM_AVAILABLE = True
 except ModuleNotFoundError:
     XLSTM_AVAILABLE = False
+
+# importing xlstm overwrites CUDA_LIB with torch's library folder; restore the folder that actually contains libcublas.so
+# (the sLSTM extension reads CUDA_LIB when it is compiled, i.e., when the first model is instantiated).
+if XLSTM_AVAILABLE and _XLSTM_CUDA_LIB and os.path.exists(os.path.join(_XLSTM_CUDA_LIB, "libcublas.so")):
+    os.environ["CUDA_LIB"] = _XLSTM_CUDA_LIB
 
 
 class XLSTM(BaseModel):

@@ -255,6 +255,82 @@ These are used if ``model == transformer``.
 -  ``transformer_dropout``: Dropout used in transformer encoder layers.
 -  ``transformer_nhead``: Number of parallel transformer heads.
 
+Exformer settings
+~~~~~~~~~~~~~~~~~
+
+These are used if ``model == exformer``. Exformer applies self-attention to patches of the input sequence
+under a sparse mask built from three components: a *local* band, a *stride* (periodic) component and an
+*extreme* component that links time steps carrying the same extreme label.
+
+-  ``exformer_patch_size``: Number of time steps per patch. Attention runs over
+   ``seq_length / exformer_patch_size`` patches instead of over time steps.
+-  ``exformer_embed_dim``: Per-time-step embedding size. The attention dimension is
+   ``exformer_embed_dim * exformer_patch_size`` and must be divisible by ``exformer_n_heads``.
+-  ``exformer_n_heads``: Number of parallel attention heads.
+-  ``exformer_encoder_depth``: Number of stacked attention + feed-forward layers.
+-  ``exformer_d_ff``: Feed-forward dimension per time step (the layer width is
+   ``exformer_d_ff * exformer_patch_size``).
+-  ``exformer_dropout``: Dropout used in the encoder layers.
+-  ``exformer_local_window``: Width of the local band of the sparse mask. A patch attends to all
+   patches within ``exformer_local_window // 2``.
+-  ``exformer_stride``: Stride of the periodic component of the sparse mask. A patch attends to
+   patches at distances that are multiples of ``exformer_stride + 1``.
+-  ``exformer_mask``: Which mask to build. Choices are ``[dozer, dozer_ext_0, dozer_ext_only,
+   extreme_mask, full_mask]``. ``dozer_ext_0`` is the extreme-adaptive mask; ``dozer`` drops the
+   extreme component.
+-  ``exformer_patch_thres``: Number of extreme time steps needed to mark a whole patch as extreme.
+-  ``exformer_moving_avg``: List of kernel sizes of the seasonal/trend decomposition.
+-  ``exformer_extreme_variable``: Name of the dynamic input whose magnitude defines the extreme label.
+-  ``exformer_extreme_threshold``: Threshold (in units of the standardized input) above which a time
+   step counts as extreme.
+
+PeakFocus transformer settings
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+These are used if ``model == peak_transformer``, a Non-stationary Transformer with an optional
+block-maximum ("peak") decoder.
+
+-  ``peak_transformer_d_model``, ``peak_transformer_n_heads``, ``peak_transformer_d_ff``,
+   ``peak_transformer_e_layers``, ``peak_transformer_d_layers``, ``peak_transformer_dropout``:
+   The usual encoder/decoder dimensions.
+-  ``peak_transformer_label_len``: Number of steps of the input window used as decoder start token.
+-  ``peak_transformer_hour_day``: ``n`` normalizes the whole window and enables the de-stationary
+   factors; ``h`` normalizes per hour-of-day and requires ``seq_length`` and
+   ``peak_transformer_label_len + predict_last_n`` to be multiples of 24.
+-  ``peak_transformer_with_shift``: ``ws`` learns an output scale and shift from the window
+   statistics, ``none`` skips the output rescaling. ``ws`` requires ``head: regression``.
+-  ``peak_transformer_shift_segments``: Number of chunks the window statistics are computed over.
+-  ``peak_transformer_p_hidden_dims`` / ``peak_transformer_p_hidden_layers``: Size of the
+   de-stationary projectors.
+-  ``peak_transformer_peak_decoder``: If True, additionally return the 24-step block maximum of the
+   prediction as ``y_hat_peak``. Requires ``predict_last_n`` to be a multiple of 24.
+
+PeakFocus settings
+~~~~~~~~~~~~~~~~~~
+
+These are used if ``model == peakfocus``.
+
+-  ``peakfocus_d_model``, ``peakfocus_n_heads``, ``peakfocus_d_ff``, ``peakfocus_d_layers``,
+   ``peakfocus_dropout``: The usual encoder/decoder dimensions.
+-  ``peakfocus_mlp_layers``: Number of residual MLP blocks in the encoder backbone.
+-  ``peakfocus_n_scales``: Number of pyramid levels of the multi-scale peak locator (MSM-PL).
+-  ``peakfocus_instance_norm``: If True, instance-normalize the input window per channel as in the reference implementation. Without the reference's de-normalization (which needs the target's own history as input) this removes the absolute magnitude of the forcings, so the default is False.
+-  ``peakfocus_if_msm_pl``: If False, MSM-PL is replaced by a plain linear head.
+-  ``peakfocus_if_lad``: If False, the decoder cross-attends to the encoder output directly instead
+   of to the peak-gated context.
+
+Peak-aware regularization settings
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+These are used by the ``peak_focal`` and ``peak_weighted_mse`` entries of ``regularization``. Both
+derive peak labels from the target window itself.
+
+-  ``peak_label_window``: Half-width of the neighborhood a time step has to dominate to be a peak.
+-  ``peak_label_threshold``: Minimum standardized target value of a peak.
+-  ``peak_soft_label_sigma`` / ``peak_soft_label_tolerance``: Width of the Gaussian profile that
+   spreads hard peak labels over neighboring time steps.
+-  ``peak_focal_alpha`` / ``peak_focal_gamma``: Focal loss parameters of the peak classification term.
+
 XLSTM settings
 ~~~~~~~~~~~~~~
 These are used if ``model == x_lstm``.
@@ -383,10 +459,14 @@ Training settings
 
 -  ``regularization``: List of strings or 2-tuples with regularization terms and corresponding weights.
    If no weights are specified, they default to 1.
-   Currently, two reqularizations are supported:
+   Currently, four reqularizations are supported:
    (1) ``tie_frequencies``, which couples the predictions of
-   all frequencies via an MSE term, and (2) ``forecast_overlap``, which
-   couples overlapping sequences between hindcast and forecast models.
+   all frequencies via an MSE term, (2) ``forecast_overlap``, which
+   couples overlapping sequences between hindcast and forecast models,
+   (3) ``peak_focal``, a focal loss on a model's peak-localization logits
+   (requires a model that returns ``peak_logits``, e.g. ``peakfocus``), and
+   (4) ``peak_weighted_mse``, a squared error restricted to the peaks of the
+   target window. See `Peak-aware regularization settings`_ for their options.
    New regularizations can be added
    :py:mod:`here <neuralhydrology.training.regularization>`.
 
@@ -497,8 +577,12 @@ Data settings
    ``lamah_{a,b,c}`` (`LamaH-CE by Klingler et al. <https://essd.copernicus.org/articles/13/4529/2021/>`__), 
    ``hourly_camels_us`` (hourly forcing and streamflow data for 516 CAMELS (US) basins, published 
    by `Gauch et al. <https://hess.copernicus.org/articles/25/2045/2021/>`__), 
-   and ``generic`` (can be used with any dataset that is stored in a specific format, 
-   see :py:class:`documentation <neuralhydrology.datasetzoo.genericdataset>` for further informations).
+   ``generic`` (can be used with any dataset that is stored in a specific format, 
+   see :py:class:`documentation <neuralhydrology.datasetzoo.genericdataset>` for further informations),
+   and ``dailycsv`` / ``hourlycsv`` (daily or hourly time series stored as plain csv files, one input and one
+   target file per basin, plus optional static attributes in ``attributes/*.csv``; variable names are taken
+   directly from the csv column names. See :py:class:`documentation <neuralhydrology.datasetzoo.dailycsv>`
+   and :py:class:`documentation <neuralhydrology.datasetzoo.hourlycsv>` for the expected folder layout).
 
 -  ``data_dir``: Full or relative path to the root directory of the data set.
 
@@ -686,4 +770,6 @@ Can be ignored if ``dataset not in ['camels_us', 'hourly_camels_us']``
 -  ``forcings``: Can be either a string or a list of strings that
    correspond to forcing products in the camels data set. Also supports
    ``maurer_extended``, ``nldas_extended``, and (for
-   ``hourly_camels_us``) ``nldas_hourly``.
+   ``hourly_camels_us``) ``nldas_hourly``. For ``dailycsv`` / ``hourlycsv``, this argument is optional
+   (defaults to ``daily`` / ``hourly``); if several forcing products are listed, each is loaded from
+   ``time_series/input/<daily|hourly>/<forcing>`` and the variables are suffixed with ``_<forcing>``.

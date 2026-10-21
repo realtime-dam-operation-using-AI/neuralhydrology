@@ -1,0 +1,59 @@
+experiment_name: gru_B
+run_dir: null
+train_basin_file: YDDam_basin.txt
+validation_basin_file: YDDam_basin.txt
+test_basin_file: YDDam_basin.txt
+train_start_date: 01/01/2006
+train_end_date: 31/12/2017
+validation_start_date: 01/01/2018
+validation_end_date: 31/12/2021
+test_start_date: 01/01/2022
+test_end_date: 31/12/2025
+seed: 111
+device: cuda:0
+validate_every: 1
+validate_n_random_basins: 1
+metrics:
+- NSE
+- KGE
+head: regression
+output_activation: linear
+optimizer: Adam
+loss: MSE
+learning_rate:
+  0: 0.001
+batch_size: 256
+epochs: 50
+clip_gradient_norm: 1
+early_stopping: true
+patience_early_stopping: 5
+minimum_epochs_before_early_stopping: 30
+patience_dynamic_learning_rate: 3
+factor_dynamic_learning_rate: 0.5
+seq_length: 720
+predict_last_n: 1
+num_workers: 4
+log_interval: 100
+log_tensorboard: false
+log_n_figures: 0
+save_weights_every: 1
+save_validation_results: false
+dataset: hourlycsv
+data_dir: ../../data/YDDam_paper
+forcings:
+- hourly
+target_variables:
+- inflow
+clip_targets_to_zero:
+- inflow
+model: gru
+hidden_size: 64
+output_dropout: 0.4
+dynamic_inputs:
+- rf_9000028
+- rf_9000027
+- rf_9000023
+- rf_9000030
+- rf_9000029
+- rf_9000026
+- rf_9000025

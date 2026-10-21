@@ -71,14 +71,11 @@ class Mamba(BaseModel):
         # possibly pass dynamic and static inputs through embedding layers, then concatenate them
         x_d = self.embedding_net(data)
 
-        # reshaping dimensions to what mamba expects:
-        x_d_transition = self.transition_layer(x_d)
+        # InputLayer returns [seq_length, batch_size, n_features]; mamba_ssm expects [batch_size, seq_length, d_model]
+        x_d_transition = self.transition_layer(x_d).transpose(0, 1)
 
+        # [batch_size, seq_length, hidden_size]
         mamba_output = self.mamba(x_d_transition)
 
-        # reshape to [batch_size, seq, n_hiddens]
-        mamba_output = mamba_output.transpose(0, 1)
-
-        pred = {'y_hat': mamba_output}
-        pred.update(self.head(self.dropout(mamba_output)))
+        pred = self.head(self.dropout(mamba_output))
         return pred

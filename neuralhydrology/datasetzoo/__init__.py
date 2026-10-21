@@ -12,6 +12,8 @@ from neuralhydrology.datasetzoo.camelsind import CamelsIND
 from neuralhydrology.datasetzoo.genericdataset import GenericDataset
 from neuralhydrology.datasetzoo.hourlycamelsus import HourlyCamelsUS
 from neuralhydrology.datasetzoo.lamah import LamaH
+from neuralhydrology.datasetzoo.dailycsv import DailyCSV
+from neuralhydrology.datasetzoo.hourlycsv import HourlyCSV
 from neuralhydrology.utils.config import Config
 from neuralhydrology.datasetzoo.datasetregistry import DatasetRegistry
 
@@ -26,8 +28,9 @@ def get_dataset(cfg: Config,
     """Get data set instance, depending on the run configuration.
 
     Currently implemented datasets are 'caravan', 'camels_aus', 'camels_br', 'camels_cl', 'camels_de', 'camels_gb',
-    'camels_us' and 'hourly_camels_us'. The 'generic' dataset class can be used for any kind of dataset as long as
-    it is in the correct format.
+    'camels_ind', 'camels_us', 'hourly_camels_us' and 'lamah_{a,b,c}'. The 'generic' dataset class can be used for any
+    kind of dataset as long as it is in the correct (netCDF) format. The 'dailycsv' and 'hourlycsv' dataset classes
+    read daily/hourly time series from plain csv files (one input and one target file per basin).
 
     New dataset classes can be added at the beginning of runtime using the function register_dataset().
 
@@ -112,4 +115,5 @@ _datasetZooRegistry.register_dataset_class("lamah_c", LamaH)
 _datasetZooRegistry.register_dataset_class("caravan", Caravan)
 _datasetZooRegistry.register_dataset_class("camels_ind", CamelsIND)
 _datasetZooRegistry.register_dataset_class("camels_de", CamelsDE)
-
+_datasetZooRegistry.register_dataset_class("dailycsv", DailyCSV)
+_datasetZooRegistry.register_dataset_class("hourlycsv", HourlyCSV)

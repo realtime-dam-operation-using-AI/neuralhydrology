@@ -8,6 +8,7 @@ from neuralhydrology.modelzoo.mamba import Mamba
 from neuralhydrology.modelzoo.customlstm import CustomLSTM
 from neuralhydrology.modelzoo.ealstm import EALSTM
 from neuralhydrology.modelzoo.embcudalstm import EmbCudaLSTM
+from neuralhydrology.modelzoo.exformer import Exformer
 from neuralhydrology.modelzoo.handoff_forecast_lstm import HandoffForecastLSTM
 from neuralhydrology.modelzoo.hybridmodel import HybridModel
 from neuralhydrology.modelzoo.gru import GRU
@@ -15,6 +16,8 @@ from neuralhydrology.modelzoo.mclstm import MCLSTM
 from neuralhydrology.modelzoo.mtslstm import MTSLSTM
 from neuralhydrology.modelzoo.multihead_forecast_lstm import MultiHeadForecastLSTM
 from neuralhydrology.modelzoo.odelstm import ODELSTM
+from neuralhydrology.modelzoo.peak_transformer import PeakTransformer
+from neuralhydrology.modelzoo.peakfocus import PeakFocus
 from neuralhydrology.modelzoo.sequential_forecast_lstm import SequentialForecastLSTM
 from neuralhydrology.modelzoo.stacked_forecast_lstm import StackedForecastLSTM
 from neuralhydrology.modelzoo.transformer import Transformer
@@ -29,6 +32,9 @@ SINGLE_FREQ_MODELS = [
     "embcudalstm", 
     "gru", 
     "transformer",
+    "exformer",
+    "peak_transformer",
+    "peakfocus",
     "mamba",
     "mclstm", 
     "arlstm",
@@ -90,6 +96,12 @@ def get_model(cfg: Config) -> nn.Module:
         model = MCLSTM(cfg=cfg)
     elif cfg.model.lower() == "transformer":
         model = Transformer(cfg=cfg)
+    elif cfg.model.lower() == "exformer":
+        model = Exformer(cfg=cfg)
+    elif cfg.model.lower() == "peak_transformer":
+        model = PeakTransformer(cfg=cfg)
+    elif cfg.model.lower() == "peakfocus":
+        model = PeakFocus(cfg=cfg)
     elif cfg.model.lower() == "mamba":
         model = Mamba(cfg=cfg)
     elif cfg.model.lower() == "handoff_forecast_lstm":

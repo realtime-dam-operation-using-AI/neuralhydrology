@@ -1,3 +1,4 @@
+import math
 from typing import Dict
 
 import pandas as pd
@@ -112,6 +113,7 @@ class TiedFrequencyMSERegularization(BaseRegularization):
 
         return loss
 
+
 class ForecastOverlapMSERegularization(BaseRegularization):
     """Squared error regularization for penalizing differences between hindcast and forecast models.
 
@@ -159,3 +161,134 @@ class ForecastOverlapMSERegularization(BaseRegularization):
             forecast = other_model_output['y_forecast_overlap'][key]
             loss += torch.mean((hindcast - forecast)**2)
         return loss
+
+
+def _peak_labels(y: torch.Tensor, window: int, threshold: float) -> torch.Tensor:
+    """Binary peak labels of a target window.
+
+    A time step is a peak if it is the maximum of its +/- ``window`` neighborhood and lies above ``threshold``.
+    This replaces the offline ``findpeaks`` call of the PeakFocus reference implementation, which is not
+    applicable here because NeuralHydrology builds its windows on the fly.
+
+    Parameters
+    ----------
+    y : torch.Tensor
+        Target values of shape ``[batch, predict_last_n, n_targets]``. May contain NaN.
+    window : int
+        Half-width of the neighborhood a peak has to dominate.
+    threshold : float
+        Minimum (standardized) target value of a peak.
+
+    Returns
+    -------
+    torch.Tensor
+        Float tensor of shape ``[batch, predict_last_n, n_targets]`` with 1 at peaks and 0 elsewhere. NaN
+        target steps are never labeled as peaks.
+    """
+    finite = ~torch.isnan(y)
+    filled = torch.where(finite, y, torch.full_like(y, -float('inf')))
+    if window > 0 and y.shape[1] > 1:
+        pooled = torch.nn.functional.max_pool1d(filled.transpose(1, 2),
+                                                kernel_size=2 * window + 1,
+                                                stride=1,
+                                                padding=window).transpose(1, 2)
+    else:
+        pooled = filled
+    return ((filled >= pooled) & finite & (filled > threshold)).to(y.dtype)
+
+
+def _soften(labels: torch.Tensor, sigma: float, tolerance: int) -> torch.Tensor:
+    """Spread hard peak labels over a tolerance window with a Gaussian profile.
+
+    Port of ``exp_peak_detect_based_on_long_term_forecasting.create_soft_peak_labels``.
+    """
+    if tolerance <= 0:
+        return labels
+    soft = labels
+    for distance in range(1, tolerance + 1):
+        weight = math.exp(-(distance**2) / (2 * sigma**2))
+        shifted_right = torch.nn.functional.pad(labels, (0, 0, distance, 0))[:, :labels.shape[1], :]
+        shifted_left = torch.nn.functional.pad(labels, (0, 0, 0, distance))[:, distance:, :]
+        soft = torch.maximum(soft, weight * torch.maximum(shifted_right, shifted_left))
+    return soft
+
+
+class PeakFocalRegularization(BaseRegularization):
+    """Focal loss on a model's peak-localization logits.
+
+    This is the peak-classification term of the PeakFocus "triple hybrid objective"
+    (``peak_loss_weight * FocalLoss(peak_logits, soft_peak_labels)``). It requires the model to return
+    ``peak_logits`` (see :py:class:`neuralhydrology.modelzoo.peakfocus.PeakFocus`).
+
+    The peak labels are derived from the target window itself, using ``peak_label_window`` and
+    ``peak_label_threshold``, and softened with ``peak_soft_label_sigma`` / ``peak_soft_label_tolerance``.
+
+    Parameters
+    ----------
+    cfg : Config
+        The run configuration.
+    weight : float, optional
+        Weight of the regularization term. Default: 1.
+    """
+
+    def __init__(self, cfg: Config, weight: float = 1.0):
+        super(PeakFocalRegularization, self).__init__(cfg, name='peak_focal', weight=weight)
+        self._window = cfg.peak_label_window
+        self._threshold = cfg.peak_label_threshold
+        self._sigma = cfg.peak_soft_label_sigma
+        self._tolerance = cfg.peak_soft_label_tolerance
+        self._alpha = cfg.peak_focal_alpha
+        self._gamma = cfg.peak_focal_gamma
+
+    def forward(self, prediction: Dict[str, torch.Tensor], ground_truth: Dict[str, torch.Tensor],
+                other_model_data: Dict[str, torch.Tensor]) -> torch.Tensor:
+        if 'peak_logits' not in other_model_data:
+            raise ValueError("The 'peak_focal' regularization requires a model that returns 'peak_logits'.")
+        logits = other_model_data['peak_logits']
+        y = ground_truth['y']
+
+        targets = _soften(_peak_labels(y, self._window, self._threshold), self._sigma, self._tolerance)
+        mask = ~torch.isnan(y)
+        if not torch.any(mask):
+            return logits.sum() * 0.0
+
+        bce = torch.nn.functional.binary_cross_entropy_with_logits(logits, targets, reduction='none')
+        probs = torch.sigmoid(logits)
+        p_t = probs * targets + (1 - probs) * (1 - targets)
+        alpha_t = torch.where(targets > 0.5, self._alpha, 1 - self._alpha)
+        loss = alpha_t * (1 - p_t).pow(self._gamma) * bce
+        return loss[mask].mean()
+
+
+class PeakWeightedMSERegularization(BaseRegularization):
+    """Mean squared error restricted to the peaks of the target window.
+
+    This is the intensity term of the PeakFocus "triple hybrid objective" (``tp_mse_loss_weight``): the same
+    squared error as the main loss, but averaged only over the time steps that the peak labels mark, so that
+    peak magnitude is not diluted by the non-peak majority.
+
+    Parameters
+    ----------
+    cfg : Config
+        The run configuration.
+    weight : float, optional
+        Weight of the regularization term. Default: 1.
+    """
+
+    def __init__(self, cfg: Config, weight: float = 1.0):
+        super(PeakWeightedMSERegularization, self).__init__(cfg, name='peak_weighted_mse', weight=weight)
+        self._window = cfg.peak_label_window
+        self._threshold = cfg.peak_label_threshold
+        self._sigma = cfg.peak_soft_label_sigma
+        self._tolerance = cfg.peak_soft_label_tolerance
+
+    def forward(self, prediction: Dict[str, torch.Tensor], ground_truth: Dict[str, torch.Tensor],
+                other_model_data: Dict[str, torch.Tensor]) -> torch.Tensor:
+        y_hat, y = prediction['y_hat'], ground_truth['y']
+        weights = _soften(_peak_labels(y, self._window, self._threshold), self._sigma, self._tolerance)
+        weights = torch.where(torch.isnan(y), torch.zeros_like(weights), weights)
+        total = weights.sum()
+        if total == 0:
+            return y_hat.sum() * 0.0
+        squared_error = (torch.nan_to_num(y_hat[..., :y.shape[-1]], nan=0.0) - torch.nan_to_num(y, nan=0.0))**2
+        return (squared_error * weights).sum() / total

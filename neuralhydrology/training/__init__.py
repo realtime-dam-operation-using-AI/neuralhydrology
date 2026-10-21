@@ -101,6 +101,10 @@ def get_regularization_obj(cfg: Config) -> List[regularization.BaseRegularizatio
             regularization_modules.append(regularization.TiedFrequencyMSERegularization(cfg=cfg, weight=reg_weight))
         elif reg_name == "forecast_overlap":
             regularization_modules.append(regularization.ForecastOverlapMSERegularization(cfg=cfg, weight=reg_weight))
+        elif reg_name == "peak_focal":
+            regularization_modules.append(regularization.PeakFocalRegularization(cfg=cfg, weight=reg_weight))
+        elif reg_name == "peak_weighted_mse":
+            regularization_modules.append(regularization.PeakWeightedMSERegularization(cfg=cfg, weight=reg_weight))
         else:
             raise NotImplementedError(f"{reg_name} not implemented or not linked in `get_regularization_obj()`.")
 

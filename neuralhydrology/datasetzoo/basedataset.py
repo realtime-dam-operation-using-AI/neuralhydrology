@@ -97,9 +97,11 @@ class BaseDataset(Dataset):
             self.basins = utils.load_basin_file(getattr(cfg, f"{period}_basin_file"))
         else:
             self.basins = [basin]
-        self.additional_features = additional_features
-        self.id_to_int = id_to_int
-        self.scaler = scaler
+        # Use fresh containers if the (mutable) default arguments are passed, so that creating multiple datasets in
+        # the same process never leaks e.g. the scaler of the first dataset into the following ones.
+        self.additional_features = additional_features if additional_features else []
+        self.id_to_int = id_to_int if id_to_int else {}
+        self.scaler = scaler if scaler else {}
         # don't compute scale when finetuning
         if is_train and not scaler:
             self._compute_scaler = True

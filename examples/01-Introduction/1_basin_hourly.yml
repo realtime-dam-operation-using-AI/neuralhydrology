@@ -1,0 +1,114 @@
+# --- Experiment configurations --------------------------------------------------------------------
+
+# experiment name, used as folder name
+experiment_name: test_run_hourly
+
+run_dir:
+
+# files to specify training, validation and test basins (relative to code root or absolute path)
+train_basin_file: 1_basin.txt
+validation_basin_file: 1_basin.txt
+test_basin_file: 1_basin.txt
+
+# training, validation and test time periods (format = 'dd/mm/yyyy')
+# NOTE: hourly NLDAS forcings and hourly USGS streamflow only overlap from 1989-10 onwards, so the
+# daily tutorial's validation period (1980-1989) cannot be used here. We therefore use the same
+# split as examples/04-Multi-Timescale.
+train_start_date: "01/10/1999"
+train_end_date: "30/09/2008"
+validation_start_date: "01/10/1996"
+validation_end_date: "30/09/1999"
+test_start_date: "01/10/1989"
+test_end_date: "30/09/1996"
+
+# fixed seed so that the model comparison is reproducible
+seed: 111
+
+# which GPU (id) to use [in format of cuda:0, cuda:1 etc, or cpu, mps or None]
+device: cuda:0
+
+# --- Validation configuration ---------------------------------------------------------------------
+
+# early stopping requires validation after *every* epoch (see Config.early_stopping)
+validate_every: 1
+validate_n_random_basins: 1
+metrics:
+  - NSE
+  - KGE
+
+# --- Model configuration --------------------------------------------------------------------------
+
+model: cudalstm
+head: regression
+output_activation: linear
+
+hidden_size: 64
+initial_forget_bias: 3
+output_dropout: 0.4
+
+# --- Training configuration -----------------------------------------------------------------------
+
+optimizer: Adam
+loss: MSE
+
+# NOTE: with early_stopping: True the library also switches on ReduceLROnPlateau
+# (Config.dynamic_learning_rate mirrors early_stopping), and that *replaces* the manual
+# learning-rate schedule below -- only the epoch-0 entry is used, as the initial LR.
+learning_rate:
+  0: 1.0e-3
+
+batch_size: 256
+
+# 100 epochs is an upper bound; early stopping decides when we actually stop
+epochs: 100
+clip_gradient_norm: 1
+
+# --- Early stopping -------------------------------------------------------------------------------
+
+early_stopping: True
+patience_early_stopping: 10
+minimum_epochs_before_early_stopping: 20
+patience_dynamic_learning_rate: 5
+factor_dynamic_learning_rate: 0.5
+
+# --- Sequence configuration -----------------------------------------------------------------------
+
+# 720 hours = 30 days (1 month) of hourly look-back -- identical for every hourly
+# tutorial, so that the model comparison in models_nbs/hourly_comparison.ipynb is fair
+seq_length: 720
+predict_last_n: 1
+
+num_workers: 4
+log_interval: 50
+log_tensorboard: True
+log_n_figures: 1
+
+# every epoch is checkpointed so that we can evaluate the *best* epoch, not just the last one
+save_weights_every: 1
+
+# --- Data configurations --------------------------------------------------------------------------
+
+dataset: hourly_camels_us
+data_dir: ../../data/CAMELS_US
+
+forcings:
+  - nldas_hourly
+
+dynamic_inputs:
+  - convective_fraction
+  - longwave_radiation
+  - potential_energy
+  - potential_evaporation
+  - pressure
+  - shortwave_radiation
+  - specific_humidity
+  - temperature
+  - total_precipitation
+  - wind_u
+  - wind_v
+
+target_variables:
+  - QObs(mm/h)
+
+clip_targets_to_zero:
+  - QObs(mm/h)
